@@ -1,4 +1,6 @@
 const uglify = require( 'rollup-plugin-uglify' );
+const sourcemaps = require( 'rollup-plugin-sourcemaps' );
+const resolve = require( 'rollup-plugin-node-resolve' );
 
 export default {
     input: './dist/es2015/ul4.js',
@@ -9,5 +11,8 @@ export default {
         sourcemap: true
     },
     plugins: [
-        uglify.uglify()]
+        resolve(),
+        uglify.uglify(),
+        sourcemaps()
+    ]
 }

@@ -16,11 +16,22 @@
 	},
 	"author": "Walter Doerwald",
 	"scripts": {
-		"build": "tsc && node_modules/babel-cli/bin/babel.js dist/ul4.js --source-maps=true --out-file dist/ul4.min.js"
+		"build": "sh build.sh"
 	},
 	"devDependencies": {
-		
+		"@babel/cli": "^7.0.0",
+		"@babel/core": "^7.0.0",
+		"@babel/plugin-proposal-class-properties": "^7.0.0",
+		"@babel/plugin-proposal-object-rest-spread": "^7.0.0",
+		"@babel/plugin-transform-modules-umd": "^7.0.0",
+		"@babel/preset-env": "^7.0.0",
+		"@babel/preset-typescript": "^7.0.0",
+		"rollup": "^0.65.0",
+		"rollup-plugin-uglify": "^5.0.2",
+		"typescript": "^3.0.3"
 	},
 	"dependencies": {
+		"@babel/polyfill": "^7.0.0",
+		"blueimp-md5": "^2.10.0"
 	}
 }

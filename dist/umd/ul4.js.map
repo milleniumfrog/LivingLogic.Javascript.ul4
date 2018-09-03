@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/ul4.ts"],"names":["load","ul4on"],"mappings":"w0BAGO,QAASA,CAAAA,IAAT,EAAiB,CACpBC,KAAK,CAACD,IAAN,GACH,C","sourcesContent":["import * as ul4on from './ul4on';\n\n\nexport function load () {\n    ul4on.load();\n}"],"file":"ul4.js"}

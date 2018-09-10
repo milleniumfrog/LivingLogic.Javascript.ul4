@@ -1,10 +1,6 @@
 export var ul4;
 (function (ul4) {
     class _Set {
-        /**
-         * add items to Set
-         * @param {any[]} items
-         */
         add(...items) {
             for (let item of items)
                 this.items[item] = true;
@@ -15,13 +11,7 @@ export var ul4;
 export var ul4on;
 (function (ul4on) {
     let _registry = {};
-    /**
-     * checks if map exists when loading
-     */
     const _havemap = (typeof (Map) === "function" && typeof (Map.prototype.forEach) === "function");
-    /**
-     * checks if maps constructor exists when loading
-     */
     const _havemapconstructor = (function () {
         if (_havemap) {
             try {
@@ -33,13 +23,7 @@ export var ul4on;
         }
         return false;
     })();
-    /**
-     * checks if set exists when loading
-     */
     const _haveset = (typeof (Set) === "function" && typeof (Set.prototype.forEach) === "function");
-    /**
-     * checks if set constructor exists when loading
-     */
     const _havesetconstructor = (function () {
         if (_haveset) {
             try {
@@ -51,10 +35,6 @@ export var ul4on;
         }
         return false;
     })();
-    /**
-     * make a Maplike
-     * @param {any[]} items
-     */
     const _makemap = (function () {
         if (_havemap) {
             return function (...items) {
@@ -73,9 +53,6 @@ export var ul4on;
             };
         }
     })();
-    /**
-     * set a value in a Maplike
-     */
     const _setmap = (function () {
         if (_havemap) {
             return function (map, key, value) {
@@ -88,9 +65,6 @@ export var ul4on;
             };
         }
     })();
-    /**
-     * create empty Maplike
-     */
     const _emptymap = (function () {
         if (_havemap) {
             return function () {
@@ -103,9 +77,6 @@ export var ul4on;
             };
         }
     })();
-    /**
-     * get value for a key from a Maplike
-     */
     const _getmap = (function () {
         if (_havemap) {
             return function (map, key) {
@@ -118,9 +89,6 @@ export var ul4on;
             };
         }
     })();
-    /**
-     * create empty Set
-     */
     const _emptyset = (function () {
         if (_haveset) {
             return function () {
@@ -133,10 +101,6 @@ export var ul4on;
             };
         }
     })();
-    /**
-     * make a set
-     * @param {any[]} items
-     */
     function _makeset(...items) {
         let set = _emptymap();
         for (let item of items) {
@@ -144,21 +108,11 @@ export var ul4on;
         }
         return set;
     }
-    /**
-     * Register the constructor function ``f`` under the name ``name`` with the UL4ON machinery
-     * @param name
-     * @param f
-     */
     function register(name, f) {
         f.prototype.ul4onname = name;
         _registry[name] = f;
     }
     ul4on.register = register;
-    /**
-     * Return a string that contains the object ``obj`` in the UL4ON serialization format
-     * @param obj
-     * @param indent
-     */
     function dumps(obj, indent) {
         let encoder = new Encoder(indent);
     }
@@ -169,10 +123,6 @@ export var ul4on;
     }
     ul4on.loads = loads;
     class Encoder {
-        /**
-         * create a new Encoder object
-         * @param ident
-         */
         constructor(ident = null) {
             this.ident = ident;
             this.data = [];
@@ -189,7 +139,7 @@ export var ul4on;
             this.registry = registry;
             this.pos = 0;
             this.backrefs = [];
-            this.stack = []; // Use for informative error messages
+            this.stack = [];
         }
         load() { }
         ;

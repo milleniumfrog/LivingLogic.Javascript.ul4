@@ -1,1 +1,0 @@
-{"version":3,"sources":["../../src/ul4on.ts"],"names":["load","console","log","p"],"mappings":"qWACO,QAASA,CAAAA,IAAT,EAAgB,CACnBC,OAAO,CAACC,GAAR,CAAY,OAAZ,EACH,CAEM,QAASC,CAAAA,CAAT,EAAa,CAEnB,C","sourcesContent":["import * as ul4 from './ul4';\nexport function load() {\n    console.log(\"hello\");\n}\n\nexport function p() {\n\n}"],"file":"ul4on.js"}

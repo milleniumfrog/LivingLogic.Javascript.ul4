@@ -1,6 +1,6 @@
-const uglify = require( 'rollup-plugin-uglify' );
-const sourcemaps = require( 'rollup-plugin-sourcemaps' );
-const resolve = require( 'rollup-plugin-node-resolve' );
+const uglify = require('rollup-plugin-uglify');
+const sourcemaps = require('rollup-plugin-sourcemaps');
+const babel = require('rollup-plugin-babel');
 
 export default {
     input: './dist/es2015/ul4.js',
@@ -11,8 +11,19 @@ export default {
         sourcemap: true
     },
     plugins: [
-        resolve(),
         uglify.uglify(),
-        sourcemaps()
+        sourcemaps(),
+        babel(
+            {
+                "presets": [
+                    [
+                        "@babel/preset-env",
+                        {
+                            "useBuiltIns": "entry"
+                        }
+                    ]
+                ]
+            }
+        )
     ]
 }

@@ -5,7 +5,7 @@ namespace helpers {
 	/**
 	 * checks if map exists when loading
 	 */
-	const _havemap: boolean = (typeof(Map) === "function" && typeof(Map.prototype.forEach) === "function");
+	export const _havemap: boolean = (typeof(Map) === "function" && typeof(Map.prototype.forEach) === "function");
 	
 	/**
 	 * checks if maps constructor exists when loading
@@ -153,6 +153,40 @@ export namespace ul4 {
 	let _nextid: number = 1;
 
 	// --FUNCTIONS--
+
+	export function _update( obj: any, others: any, kwargs: any ): any {
+		if (!ul4._isdict(obj))
+			throw new ul4.TypeError("update() requires a dict");
+		for (let other of others)
+		{
+			if (ul4._ismap(other))
+			{
+				other.forEach(function(value: any, key: string){
+					helpers._setmap(obj, key, value);
+				});
+			}
+			else if (ul4._isobject(other))
+			{
+				for (let key in other)
+					helpers._setmap(obj, key, other[key]);
+			}
+			else if (ul4._islist(other))
+			{
+				for (let item of other)
+				{
+					if (!ul4._islist(item) || (item.length != 2))
+						throw new ul4.TypeError("update() requires a dict or a list of (key, value) pairs");
+					helpers._setmap(obj, item[0], item[1]);
+				}
+			}
+			else
+				throw new ul4.TypeError("update() requires a dict or a list of (key, value) pairs");
+		}
+		kwargs.forEach(function(value: any, key: any) {
+			helpers._setmap(obj, key, value);
+		});
+		return null;
+	}
 
 	/**
 	 * Return a ``Color`` object from the hue, luminescence, saturation and alpha values ``h``, ``l``, ``s`` and ``a`` (i.e. using the HLS color model)
@@ -561,14 +595,20 @@ export namespace ul4 {
 		return Object.prototype.toString.call(obj) == "[object Date]";
 	}
 
-	//TODO
+	/**
+	 * Check if ``obj`` is a timedelta object
+	 * @param obj 
+	 */
 	export function _istimedelta( obj: any ): boolean {
-		return false;
+		return (obj instanceof ul4.TimeDelta);
 	}
 
-	// TODO
+	/**
+	 * Check if ``obj`` is a monthdelta object
+	 * @param obj 
+	 */
 	export function _ismonthdelta( obj: any ): boolean {
-		return false;
+		return (obj instanceof ul4.MonthDelta);
 	}
 
 	export function _islist( obj: any ): boolean {
@@ -842,7 +882,6 @@ export namespace ul4 {
 				return obj.ul4type();
 			else
 				return ul4.Protocol.get(obj).ul4type();
-			return "";
 		}
 	}
 	
@@ -942,10 +981,6 @@ export namespace ul4 {
 		}
 		throw new ul4.TypeError(ul4._type(obj) + " object is not iterable");
 	}
-
-
-	// TODO
-	export class PROTO {}
 
 	export class Proto {
 		public __id__: number;
@@ -1384,22 +1419,22 @@ export namespace ul4 {
 		public static dir() {
 		}
 
-		public static get( obj: any ) {
+		public static get( obj: any, ...args: any[] ): any {
 			if (ul4._isstr( obj ))
 				return ul4.StrProtocol;
 			else if ( ul4._islist(obj) )
 				return ul4.ListProtocol;
 			else if ( ul4._isdate(obj) )
 				return ul4.DateProtocol;
-			// else if ( ul4._isset(obj) )
-			// 	return ul4.SetProtocol;
-			// else if ( ul4._ismap(obj) )
-			// 	return ul4.MapProtocol;
-			// else if ( ul4._isdatetime(obj) )
-			// 	return ul4.DateTimeProtocol;
-			// else if ( ul4._isobject(obj) )
-			// 	return ul4.ObjectProtocol;
-			// else
+			else if ( ul4._isset(obj) )
+				return ul4.SetProtocol;
+			else if ( ul4._ismap(obj) )
+				return ul4.MapProtocol;
+			else if ( ul4._isdatetime(obj) )
+				return ul4.DateTimeProtocol;
+			else if ( ul4._isobject(obj) )
+				return ul4.ObjectProtocol;
+			else
 				return ul4.Protocol;
 		}
 
@@ -1446,6 +1481,156 @@ export namespace ul4 {
 				return (<any>this).has(attrname);
 		}
 	}
+
+	export class ObjectProtocol extends Protocol {
+
+		public static ul4type()
+		{
+			return "dict";
+		}
+
+		public static getattr(obj: any, attrname: any)
+		{
+			let result: any;
+			if (obj && typeof(obj.__getattr__) === "function") // test this before the generic object test
+				result = obj.__getattr__(attrname);
+			else
+				result = obj[attrname];
+			if (typeof(result) !== "function")
+				return result;
+			let realresult: any = function(...args: any[]) {
+				// We can use ``apply`` here, as we know that ``obj`` is a real object.
+				return result.apply(obj, args);
+			};
+			realresult._ul4_name = result._ul4_name || result.name;
+			realresult._ul4_signature = result._ul4_signature;
+			realresult._ul4_needsobject = result._ul4_needsobject;
+			realresult._ul4_needscontext = result._ul4_needscontext;
+			return realresult;
+		}
+
+		public static get(obj: any, key: string, default_: any =null): any
+		{
+			let result = obj[key];
+			if (typeof(result) === "undefined")
+				return default_;
+			return result;
+		}
+
+		public static items(obj: any)
+		{
+			let result = [];
+			for (let key in obj)
+				result.push([key, obj[key]]);
+			return result;
+		}
+
+		public static values(obj: any)
+		{
+			let result = [];
+			for (let key in obj)
+				result.push(obj[key]);
+			return result;
+		}
+
+		public static clear(obj: any)
+		{
+			for (let key in obj)
+				delete obj[key];
+		}
+	}
+
+	ul4.expose(ul4.ObjectProtocol.get, ["key", "default=", null]);
+	ul4.expose(ul4.ObjectProtocol.items, []);
+	ul4.expose(ul4.ObjectProtocol.values, []);
+	ul4.expose(ul4.ObjectProtocol.clear, []);
+
+	export class MapProtocol extends Protocol {
+		public static ul4type()
+		{
+			return "dict";
+		}
+
+		public static getattr(obj: any, attrname: string)
+		{
+			if (this.attrs.has(attrname))
+			{
+				let attr = (<any>this)[attrname];
+				let realattr: any = function realattr(...args: any[]) {
+					return attr.apply((<any>this), [obj, ...args]);
+				};
+				realattr.name = attr.name;
+				realattr._ul4_name = attr._ul4_name || attr.name;
+				realattr._ul4_signature = attr._ul4_signature;
+				realattr._ul4_needsobject = attr._ul4_needsobject;
+				realattr._ul4_needscontext = attr._ul4_needscontext;
+				return realattr;
+			}
+			else
+				return obj.get(attrname);
+		}
+
+		get(obj: any, key: string, default_: any =null)
+		{
+			if (obj.has(key))
+				return obj.get(key);
+			return default_;
+		}
+
+		items(obj: any)
+		{
+			let result: any[] = [];
+			obj.forEach(function(value: any, key: string){
+				result.push([key, value]);
+			});
+			return result;
+		}
+
+		values(obj: any)
+		{
+			let result: any[] = [];
+			obj.forEach(function(value: any, key: string){
+				result.push(value);
+			});
+			return result;
+		}
+
+		update(obj: any, other: any, kwargs: any)
+		{
+			return ul4._update(obj, other, kwargs);
+		}
+
+		clear(obj: any): void
+		{
+			obj.clear();
+			return null;
+		}
+	}
+
+	export class SetProtocol extends Protocol {
+
+		public static attr = helpers._makeset( "add", "clear" );
+
+		public static ul4type()
+		{
+			return "set";
+		}
+
+		public static add(obj: any, items: string)
+		{
+			for (let item of items)
+				obj.add(item);
+		}
+
+		public static clear( obj: Set<string> | _Set ): void
+		{
+			obj.clear();
+			return null;
+		}
+	}
+
+	ul4.expose(ul4.SetProtocol.add, ["*items"]);
+	ul4.expose(ul4.SetProtocol.clear, []);
 
 	export class DateTimeProtocol extends Protocol {
 
@@ -2095,6 +2280,10 @@ export namespace ul4 {
 				this.items[item] = true;
 		}
 
+		clear() {
+			this. items = {};
+		}
+
 		has( item: string ): boolean {
 			return this.items[item] ? true : false;
 		}
@@ -2232,7 +2421,7 @@ export namespace ul4 {
 		public start: string;
 		public stop: string;
 
-		constructor( start: string, stop: string ) {
+		constructor( start?: string, stop?: string ) {
 			super();
 			this.start = start;
 			this.stop = stop;
@@ -2345,7 +2534,7 @@ export namespace ul4 {
 		public code: any;
 		public text: any;
 
-		_eval(){return null};
+		_eval(): any{return null};
 
 		constructor(template: any, tag: any, tagpos: any, codepos: number)
 		{
@@ -2575,7 +2764,7 @@ export namespace ul4 {
 
 		r()
 		{
-				return this._r;
+			return this._r;
 		}
 
 		g()
@@ -2685,6 +2874,25 @@ export namespace ul4 {
 			return "color";
 		}
 	}
+	ul4.expose(ul4.Color.prototype.r, []);
+	ul4.expose(ul4.Color.prototype.g, []);
+	ul4.expose(ul4.Color.prototype.b, []);
+	ul4.expose(ul4.Color.prototype.a, []);
+	ul4.expose(ul4.Color.prototype.lum, []);
+	ul4.expose(ul4.Color.prototype.hls, []);
+	ul4.expose(ul4.Color.prototype.hlsa, []);
+	ul4.expose(ul4.Color.prototype.hsv, []);
+	ul4.expose(ul4.Color.prototype.hsva, []);
+	ul4.expose(ul4.Color.prototype.witha, ["a"]);
+	ul4.expose(ul4.Color.prototype.withlum, ["lum"]);
+
+	export class MonthDelta extends Proto {
+		private _months: number;
+		constructor( months: number = 0 ) {
+			super();
+			this._months = months;
+		}
+	}
 
 	// --Classes--
 
@@ -2772,7 +2980,7 @@ export namespace ul4 {
 
 export namespace ul4on {
 	
-	let _registry: any = {}
+	export let _registry: any = {}
 
 	/**
 	 * Register the constructor function ``f`` under the name ``name`` with the UL4ON machinery
@@ -2942,6 +3150,7 @@ export namespace ul4on {
 	}
 
 	export class Decoder {
+		
 		public pos: number;
 		public backrefs: any[];
 		public stack: any[];
@@ -2956,6 +3165,335 @@ export namespace ul4on {
 			this.stack = []; // Use for informative error messages
 		}
 
-		public load() {};
+		/**
+		 *  Read a character from the buffer (return null on eof)
+		 */
+		readchar() {
+			if (this.pos >= this.data.length)
+				return null;
+			return this.data.charAt(this.pos++);
+		}
+
+		readcharoreof() {
+			if (this.pos >= this.data.length)
+				return null;
+			return this.data.charAt(this.pos++);
+		}
+
+		readblackchar() {
+			let re_white = /\s/;
+
+			for (;;)
+			{
+				if (this.pos >= this.data.length)
+					throw "UL4 decoder at EOF at position " + this.pos + " with path " + this.stack.join("/");
+				let c = this.data.charAt(this.pos++);
+				if (!c.match(re_white))
+					return c;
+			}
+		}
+
+		read( size: number ) {
+			if (this.pos+size > this.data.length)
+			size = this.data.length-this.pos;
+			let result = this.data.substring(this.pos, this.pos+size);
+			this.pos += size;
+			return result;
+		}
+
+		backup() {
+			--this.pos;
+		}
+
+		readnumber(): number {
+			let re_digits = /[-+0123456789.eE]/, value = "";
+			for (;;)
+			{
+				let c = this.readcharoreof();
+				if (c !== null && c.match(re_digits))
+					value += c;
+				else
+				{
+					let result = parseFloat(value);
+					if (isNaN(result))
+						throw "invalid number, got " + ul4._repr("value") + " at position " + this.pos + " with path " + this.stack.join("/");
+					return result;
+				}
+			}
+		}
+
+		_beginfakeloading()
+		{
+			let oldpos = this.backrefs.length;
+			this.backrefs.push(null);
+			return oldpos;
+		}
+
+		_endfakeloading(oldpos: number, value: any)
+		{
+			this.backrefs[oldpos] = value;
+		}
+
+		_readescape(escapechar: string, length: number)
+		{
+			let chars = this.read(length);
+			if (chars.length != length)
+				throw "broken escape " + ul4._repr("\\" + escapechar + chars) + " at position " + this.pos + " with path " + this.stack.join("/");
+			let codepoint = parseInt(chars, 16);
+			if (isNaN(codepoint))
+				throw "broken escape " + ul4._repr("\\" + escapechar + chars) + " at position " + this.pos + " with path " + this.stack.join("/");
+			return String.fromCharCode(codepoint);
+		}
+
+		/**
+		 * Load the next object from the buffer
+		 */
+	 	load(): any {
+			let typecode = this.readblackchar();
+			let result: any;
+			switch (typecode)
+			{
+				case "^":
+					return this.backrefs[this.readnumber()];
+				case "n":
+				case "N":
+					if (typecode === "N")
+						this.backrefs.push(null);
+					return null;
+				case "b":
+				case "B":
+					result = this.readchar();
+					if (result === "T")
+						result = true;
+					else if (result === "F")
+						result = false;
+					else
+						throw "wrong value for boolean, expected 'T' or 'F', got " + ul4._repr(result) + " at position " + this.pos + " with path " + this.stack.join("/");
+					if (typecode === "B")
+						this.backrefs.push(result);
+					return result;
+				case "i":
+				case "I":
+				case "f":
+				case "F":
+					result = this.readnumber();
+					if (typecode === "I" || typecode === "F")
+						this.backrefs.push(result);
+					return result;
+				case "s":
+				case "S":
+					result = [];
+					let delimiter = this.readblackchar();
+					for (;;)
+					{
+						let c = this.readchar();
+						if (c == delimiter)
+							break;
+						if (c == "\\")
+						{
+							let c2 = this.readchar();
+							if (c2 == "\\")
+								result.push("\\");
+							else if (c2 == "n")
+								result.push("\n");
+							else if (c2 == "r")
+								result.push("\r");
+							else if (c2 == "t")
+								result.push("\t");
+							else if (c2 == "f")
+								result.push("\u000c");
+							else if (c2 == "b")
+								result.push("\u0008");
+							else if (c2 == "a")
+								result.push("\u0007");
+							else if (c2 == "'")
+								result.push("'");
+							else if (c2 == '"')
+								result.push('"');
+							else if (c2 == "x")
+								result.push(this._readescape("x", 2));
+							else if (c2 == "u")
+								result.push(this._readescape("u", 4));
+							else if (c2 == "U")
+								result.push(this._readescape("U", 8));
+							else
+								result.push("\\" + c2);
+						}
+						else
+							result.push(c);
+					}
+					result = result.join("");
+					if (typecode === "S")
+						this.backrefs.push(result);
+					return result;
+				case "c":
+				case "C":
+					result = new ul4.Color();
+					if (typecode === "C")
+						this.backrefs.push(result);
+					result._r = this.load();
+					result._g = this.load();
+					result._b = this.load();
+					result._a = this.load();
+					return result;
+				case "x":
+				case "X":
+				{
+					let year = this.load();
+					let month = this.load();
+					let day = this.load();
+					result = new ul4.Date(year, month, day);
+					if (typecode === "X")
+						this.backrefs.push(result);
+					return result;
+				}
+				case "z":
+				case "Z":
+					result = new Date();
+					result.setFullYear(this.load());
+					result.setDate(1);
+					result.setMonth(this.load() - 1);
+					result.setDate(this.load());
+					result.setHours(this.load());
+					result.setMinutes(this.load());
+					result.setSeconds(this.load());
+					result.setMilliseconds(this.load()/1000);
+					if (typecode === "Z")
+						this.backrefs.push(result);
+					return result;
+				case "t":
+				case "T":
+					result = new ul4.TimeDelta();
+					result._days = this.load();
+					result._seconds = this.load();
+					result._microseconds = this.load();
+					if (typecode === "T")
+						this.backrefs.push(result);
+					return result;
+				case "r":
+				case "R":
+					result = new ul4.slice();
+					if (typecode === "R")
+						this.backrefs.push(result);
+					result.start = this.load();
+					result.stop = this.load();
+					return result;
+				case "m":
+				case "M":
+					result = new ul4.MonthDelta();
+					if (typecode === "M")
+						this.backrefs.push(result);
+					result._months = this.load();
+					return result;
+				case "l":
+				case "L":
+					this.stack.push("list");
+					result = [];
+					if (typecode === "L")
+						this.backrefs.push(result);
+					for (;;)
+					{
+						typecode = this.readblackchar();
+						if (typecode === "]")
+							break;
+						this.backup();
+						result.push(this.load());
+					}
+					this.stack.pop();
+					return result;
+				case "d":
+				case "D":
+				case "e":
+				case "E":
+					if (!helpers._havemap && (typecode == "e" || typecode == "E"))
+						throw "ordered dictionaries are not supported at position " + this.pos + " with path " + this.stack.join("/");
+					result = helpers._emptymap();
+					this.stack.push(typecode === "d" || typecode === "D" ? "dict" : "odict");
+					if (typecode === "D" || typecode === "E")
+						this.backrefs.push(result);
+					for (;;)
+					{
+						typecode = this.readblackchar();
+						if (typecode === "}")
+							break;
+						this.backup();
+						let key = this.load();
+						let value = this.load();
+						helpers._setmap(result, key, value);
+					}
+					this.stack.pop();
+					return result;
+				case "y":
+				case "Y":
+					this.stack.push("set");
+					result = helpers._makeset();
+					if (typecode === "Y")
+						this.backrefs.push(result);
+					for (;;)
+					{
+						typecode = this.readblackchar();
+						if (typecode === "}")
+							break;
+						this.backup();
+						result.add(this.load());
+					}
+					this.stack.pop();
+					return result;
+				case "o":
+				case "O":
+				{
+					let oldpos;
+					if (typecode === "O")
+						oldpos = this._beginfakeloading();
+					let name = this.load();
+					this.stack.push(name);
+					let constructor;
+					if (this.registry !== null)
+					{
+						constructor = this.registry[name];
+						if (typeof(constructor) === "undefined")
+							constructor = ul4on._registry[name];
+					}
+					else
+						constructor = ul4on._registry[name];
+					if (typeof(constructor) === "undefined")
+						throw new ul4.ValueError("can't load object of type " + ul4._repr(name) + " at position " + this.pos + " with path " + this.stack.join("/"));
+					result = new constructor();
+					if (typecode === "O")
+						this._endfakeloading(oldpos, result);
+					result.ul4onload(this);
+					typecode = this.readblackchar();
+					if (typecode !== ")")
+						throw new ul4.ValueError("object terminator ')' for object of type '" + name + "' expected, got " + ul4._repr(typecode) + " at position " + this.pos + " with path " + this.stack.join("/"));
+					this.stack.pop();
+					return result;
+				}
+				default:
+					throw new ul4.ValueError("unknown typecode " + ul4._repr(typecode) + " at position " + this.pos + " with path " + this.stack.join("/"));
+			}
+		}
+
+		/**
+		 * Return an iterator for loading the content of a object
+		 */
+		loadcontent() {
+			let self = this;
+			return {
+				next: function()
+				{
+					let typecode = self.readblackchar();
+					// Always "unread" the typecode even at the end
+					// so that at the end of a call to ul4onload()
+					// the next input is the "end of object" marker
+					// no matter whether ul4onload() uses loadcontent() or not.
+					self.backup();
+					if (typecode == ")")
+						return {done: true};
+					else
+						return {done: false, value: self.load()};
+				}
+			}
+		}
+
 	}
 }

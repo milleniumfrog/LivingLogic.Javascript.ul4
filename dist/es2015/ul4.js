@@ -1,9 +1,9 @@
 const _js_Date = Date;
 var helpers;
 (function (helpers) {
-    const _havemap = (typeof (Map) === "function" && typeof (Map.prototype.forEach) === "function");
+    helpers._havemap = (typeof (Map) === "function" && typeof (Map.prototype.forEach) === "function");
     const _havemapconstructor = (function () {
-        if (_havemap) {
+        if (helpers._havemap) {
             try {
                 if (new Map([[1, 2]]).size == 1)
                     return true;
@@ -26,7 +26,7 @@ var helpers;
         return false;
     })();
     const _makemap = (function () {
-        if (_havemap) {
+        if (helpers._havemap) {
             return function (...items) {
                 let map = new Map();
                 for (let [key, value] of items)
@@ -44,7 +44,7 @@ var helpers;
         }
     })();
     helpers._setmap = (function () {
-        if (_havemap) {
+        if (helpers._havemap) {
             return function (map, key, value) {
                 map.set(key, value);
             };
@@ -56,7 +56,7 @@ var helpers;
         }
     })();
     helpers._emptymap = (function () {
-        if (_havemap) {
+        if (helpers._havemap) {
             return function () {
                 return new Map();
             };
@@ -68,7 +68,7 @@ var helpers;
         }
     })();
     const _getmap = (function () {
-        if (_havemap) {
+        if (helpers._havemap) {
             return function (map, key) {
                 return map.get(key);
             };
@@ -103,6 +103,104 @@ var helpers;
 export var ul4;
 (function (ul4) {
     let _nextid = 1;
+    function _update(obj, others, kwargs) {
+        if (!ul4._isdict(obj))
+            throw new ul4.TypeError("update() requires a dict");
+        for (let other of others) {
+            if (ul4._ismap(other)) {
+                other.forEach(function (value, key) {
+                    helpers._setmap(obj, key, value);
+                });
+            }
+            else if (ul4._isobject(other)) {
+                for (let key in other)
+                    helpers._setmap(obj, key, other[key]);
+            }
+            else if (ul4._islist(other)) {
+                for (let item of other) {
+                    if (!ul4._islist(item) || (item.length != 2))
+                        throw new ul4.TypeError("update() requires a dict or a list of (key, value) pairs");
+                    helpers._setmap(obj, item[0], item[1]);
+                }
+            }
+            else
+                throw new ul4.TypeError("update() requires a dict or a list of (key, value) pairs");
+        }
+        kwargs.forEach(function (value, key) {
+            helpers._setmap(obj, key, value);
+        });
+        return null;
+    }
+    ul4._update = _update;
+    function _hls(h, l, s, a) {
+        let _v = function (m1, m2, hue) {
+            hue = hue % 1.0;
+            if (hue < 1 / 6)
+                return m1 + (m2 - m1) * hue * 6.0;
+            else if (hue < 0.5)
+                return m2;
+            else if (hue < 2 / 3)
+                return m1 + (m2 - m1) * (2 / 3 - hue) * 6.0;
+            return m1;
+        };
+        let m1, m2;
+        if (typeof (a) === "undefined")
+            a = 1;
+        if (s === 0.0)
+            return ul4._rgb(l, l, l, a);
+        if (l <= 0.5)
+            m2 = l * (1.0 + s);
+        else
+            m2 = l + s - (l * s);
+        m1 = 2.0 * l - m2;
+        return ul4._rgb(_v(m1, m2, h + 1 / 3), _v(m1, m2, h), _v(m1, m2, h - 1 / 3), a);
+    }
+    ul4._hls = _hls;
+    function _rgb(r, g, b, a) {
+        return new ul4.Color(255 * r, 255 * g, 255 * b, 255 * a);
+    }
+    ul4._rgb = _rgb;
+    function _date(year, month, day) {
+        return new ul4.Date(year, month, day);
+    }
+    ul4._date = _date;
+    function _isleap(obj) {
+        return new _js_Date(obj.getFullYear(), 1, 29).getMonth() === 1;
+    }
+    ul4._isleap = _isleap;
+    function _formatsource(out) {
+        let finalout = [];
+        let level = 0, needlf = false;
+        for (let part of out) {
+            if (typeof (part) === "number") {
+                level += part;
+                needlf = true;
+            }
+            else {
+                if (needlf) {
+                    finalout.push("\n");
+                    for (let j = 0; j < level; ++j)
+                        finalout.push("\t");
+                    needlf = false;
+                }
+                finalout.push(part);
+            }
+        }
+        if (needlf)
+            finalout.push("\n");
+        return finalout.join("");
+    }
+    ul4._formatsource = _formatsource;
+    function _mod(obj1, obj2) {
+        let div = Math.floor(obj1 / obj2);
+        let mod = obj1 - div * obj2;
+        if (mod !== 0 && ((obj2 < 0 && mod > 0) || (obj2 > 0 && mod < 0))) {
+            mod += obj2;
+            --div;
+        }
+        return obj1 - div * obj2;
+    }
+    ul4._mod = _mod;
     function _unorderable(operator, obj1, obj2) {
         throw new ul4.TypeError("unorderable types: " + ul4._type(obj1) + " " + operator + " " + ul4._type(obj2));
     }
@@ -341,23 +439,23 @@ export var ul4;
     }
     ul4._isstr = _isstr;
     function _iscolor(obj) {
-        return false;
+        return (obj instanceof ul4.Color);
     }
     ul4._iscolor = _iscolor;
     function _isdate(obj) {
-        return false;
+        return (obj instanceof ul4.Date);
     }
     ul4._isdate = _isdate;
     function _isdatetime(obj) {
-        return false;
+        return Object.prototype.toString.call(obj) == "[object Date]";
     }
     ul4._isdatetime = _isdatetime;
     function _istimedelta(obj) {
-        return false;
+        return (obj instanceof ul4.TimeDelta);
     }
     ul4._istimedelta = _istimedelta;
     function _ismonthdelta(obj) {
-        return false;
+        return (obj instanceof ul4.MonthDelta);
     }
     ul4._ismonthdelta = _ismonthdelta;
     function _islist(obj) {
@@ -603,7 +701,6 @@ export var ul4;
                 return obj.ul4type();
             else
                 return ul4.Protocol.get(obj).ul4type();
-            return "";
         }
     }
     ul4._type = _type;
@@ -693,9 +790,6 @@ export var ul4;
         throw new ul4.TypeError(ul4._type(obj) + " object is not iterable");
     }
     ul4._iter = _iter;
-    class PROTO {
-    }
-    ul4.PROTO = PROTO;
     class Proto {
         constructor() {
             this.__id__ = _nextid++;
@@ -714,6 +808,24 @@ export var ul4;
         }
     }
     ul4.Proto = Proto;
+    class TimeDelta extends Proto {
+        constructor(days = 0, seconds = 0, microseconds = 0) {
+            super();
+            let total_microseconds = Math.floor((days * 86400 + seconds) * 1000000 + microseconds);
+            microseconds = ul4.ModAST.prototype._do(total_microseconds, 1000000);
+            let total_seconds = Math.floor(total_microseconds / 1000000);
+            seconds = ul4.ModAST.prototype._do(total_seconds, 86400);
+            days = Math.floor(total_seconds / 86400);
+            if (seconds < 0) {
+                seconds += 86400;
+                --days;
+            }
+            this._microseconds = microseconds;
+            this._seconds = seconds;
+            this._days = days;
+        }
+    }
+    ul4.TimeDelta = TimeDelta;
     class Date extends Proto {
         constructor(year, month, day) {
             super();
@@ -847,20 +959,162 @@ export var ul4;
         }
     }
     ul4.Signature = Signature;
+    class AST extends Proto {
+        constructor(pos) {
+            super();
+            this._ul4onattrs = ["pos"];
+            this.pos = pos;
+        }
+        __getattr__(attrname) {
+            if (attrname === "type")
+                return this.ul4type;
+            else if (this._ul4onattrs.indexOf(attrname) >= 0)
+                return this[attrname];
+            throw new ul4.AttributeError(this, attrname);
+        }
+        __setitem__(attrname, value) {
+            throw new ul4.TypeError("object is immutable");
+        }
+        __str__() {
+            let out = [];
+            this._str(out);
+            return ul4._formatsource(out);
+        }
+        __repr__() {
+            let out = [];
+            this._repr(out);
+            return ul4._formatsource(out);
+        }
+        _handle_eval(context) {
+            try {
+                return this._eval(context);
+            }
+            catch (exc) {
+                if (!(exc instanceof ul4.InternalException) && !(exc instanceof ul4.LocationError))
+                    throw new ul4.LocationError(this, exc);
+                throw exc;
+            }
+        }
+        _handle_eval_set(context, value) {
+            try {
+                return this._eval_set(context, value);
+            }
+            catch (exc) {
+                if (!(exc instanceof ul4.LocationError))
+                    throw new ul4.LocationError(this, exc);
+                throw exc;
+            }
+        }
+        _eval_set(context, value) {
+            throw new ul4.LValueRequiredError();
+        }
+        _handle_eval_modify(context, operator, value) {
+            try {
+                return this._eval_modify(context, operator, value);
+            }
+            catch (exc) {
+                if (!(exc instanceof ul4.LocationError))
+                    throw new ul4.LocationError(this, exc);
+                throw exc;
+            }
+        }
+        _eval_modify(context, operator, value) {
+            throw new ul4.LValueRequiredError();
+        }
+        _repr(out) {
+        }
+        _str(out) {
+        }
+        ul4ondump(encoder) {
+            for (let attrname of this._ul4onattrs)
+                encoder.dump(this[attrname]);
+        }
+        ul4onload(decoder) {
+            for (let attrname of this._ul4onattrs)
+                this[attrname] = decoder.load();
+        }
+    }
+    ul4.AST = AST;
+    class CodeAST extends AST {
+        constructor(tag, pos) {
+            super(tag);
+            this.tag = tag;
+        }
+        _str(out) {
+            out.push(this.tag.source.substring(this.pos.start, this.pos.stop).replace(/\r?\n/g, ' '));
+        }
+    }
+    ul4.CodeAST = CodeAST;
+    class ConstAST extends CodeAST {
+        constructor(tag, pos, value) {
+            super(tag, pos);
+            this.value = value;
+        }
+        _repr(out) {
+            out.push("<ConstAST value=");
+            out.push(ul4._repr(this.value));
+            out.push(">");
+        }
+        _eval(context) {
+            return this.value;
+        }
+    }
+    ul4.ConstAST = ConstAST;
+    class BinaryAST extends CodeAST {
+        constructor(tag, pos, obj1, obj2) {
+            super(tag, pos);
+            this._ul4onattrs = ul4.AST.prototype._ul4onattrs.concat(["tag"]);
+            this.obj1 = obj1;
+            this.obj2 = obj2;
+        }
+        _repr(out) {
+            out.push("<");
+            out.push(this.constructor.name);
+            out.push(" obj1=");
+            this.obj1._repr(out);
+            out.push(" obj2=");
+            this.obj2._repr(out);
+            out.push(">");
+        }
+        _eval(context) {
+            let obj1 = this.obj1._handle_eval(context);
+            let obj2 = this.obj2._handle_eval(context);
+            return this._do(obj1, obj2);
+        }
+    }
+    ul4.BinaryAST = BinaryAST;
+    class ModAST extends BinaryAST {
+        _do(obj1, obj2) {
+            return ul4._mod(obj1, obj2);
+        }
+        _ido(obj1, obj2) {
+            return this._do(obj1, obj2);
+        }
+    }
+    ul4.ModAST = ModAST;
     class Protocol {
         static ul4type() {
             return Protocol.constructor.name;
         }
         static dir() {
         }
-        static get(obj) {
+        static get(obj, ...args) {
             if (ul4._isstr(obj))
                 return ul4.StrProtocol;
             else if (ul4._islist(obj))
                 return ul4.ListProtocol;
             else if (ul4._isdate(obj))
                 return ul4.DateProtocol;
-            return ul4.Protocol;
+            else if (ul4._isset(obj))
+                return ul4.SetProtocol;
+            else if (ul4._ismap(obj))
+                return ul4.MapProtocol;
+            else if (ul4._isdatetime(obj))
+                return ul4.DateTimeProtocol;
+            else if (ul4._isobject(obj))
+                return ul4.ObjectProtocol;
+            else
+                return ul4.Protocol;
         }
         static getattr(obj, attrname) {
             if (obj === null || obj === undefined)
@@ -900,9 +1154,308 @@ export var ul4;
     }
     Protocol.attrs = helpers._emptyset();
     ul4.Protocol = Protocol;
+    class ObjectProtocol extends Protocol {
+        static ul4type() {
+            return "dict";
+        }
+        static getattr(obj, attrname) {
+            let result;
+            if (obj && typeof (obj.__getattr__) === "function")
+                result = obj.__getattr__(attrname);
+            else
+                result = obj[attrname];
+            if (typeof (result) !== "function")
+                return result;
+            let realresult = function (...args) {
+                return result.apply(obj, args);
+            };
+            realresult._ul4_name = result._ul4_name || result.name;
+            realresult._ul4_signature = result._ul4_signature;
+            realresult._ul4_needsobject = result._ul4_needsobject;
+            realresult._ul4_needscontext = result._ul4_needscontext;
+            return realresult;
+        }
+        static get(obj, key, default_ = null) {
+            let result = obj[key];
+            if (typeof (result) === "undefined")
+                return default_;
+            return result;
+        }
+        static items(obj) {
+            let result = [];
+            for (let key in obj)
+                result.push([key, obj[key]]);
+            return result;
+        }
+        static values(obj) {
+            let result = [];
+            for (let key in obj)
+                result.push(obj[key]);
+            return result;
+        }
+        static clear(obj) {
+            for (let key in obj)
+                delete obj[key];
+        }
+    }
+    ul4.ObjectProtocol = ObjectProtocol;
+    ul4.expose(ul4.ObjectProtocol.get, ["key", "default=", null]);
+    ul4.expose(ul4.ObjectProtocol.items, []);
+    ul4.expose(ul4.ObjectProtocol.values, []);
+    ul4.expose(ul4.ObjectProtocol.clear, []);
+    class MapProtocol extends Protocol {
+        static ul4type() {
+            return "dict";
+        }
+        static getattr(obj, attrname) {
+            if (this.attrs.has(attrname)) {
+                let attr = this[attrname];
+                let realattr = function realattr(...args) {
+                    return attr.apply(this, [obj, ...args]);
+                };
+                realattr.name = attr.name;
+                realattr._ul4_name = attr._ul4_name || attr.name;
+                realattr._ul4_signature = attr._ul4_signature;
+                realattr._ul4_needsobject = attr._ul4_needsobject;
+                realattr._ul4_needscontext = attr._ul4_needscontext;
+                return realattr;
+            }
+            else
+                return obj.get(attrname);
+        }
+        get(obj, key, default_ = null) {
+            if (obj.has(key))
+                return obj.get(key);
+            return default_;
+        }
+        items(obj) {
+            let result = [];
+            obj.forEach(function (value, key) {
+                result.push([key, value]);
+            });
+            return result;
+        }
+        values(obj) {
+            let result = [];
+            obj.forEach(function (value, key) {
+                result.push(value);
+            });
+            return result;
+        }
+        update(obj, other, kwargs) {
+            return ul4._update(obj, other, kwargs);
+        }
+        clear(obj) {
+            obj.clear();
+            return null;
+        }
+    }
+    ul4.MapProtocol = MapProtocol;
+    class SetProtocol extends Protocol {
+        static ul4type() {
+            return "set";
+        }
+        static add(obj, items) {
+            for (let item of items)
+                obj.add(item);
+        }
+        static clear(obj) {
+            obj.clear();
+            return null;
+        }
+    }
+    SetProtocol.attr = helpers._makeset("add", "clear");
+    ul4.SetProtocol = SetProtocol;
+    ul4.expose(ul4.SetProtocol.add, ["*items"]);
+    ul4.expose(ul4.SetProtocol.clear, []);
+    class DateTimeProtocol extends Protocol {
+        static ul4type() {
+            return "datetime";
+        }
+        static weekday(obj) {
+            let d = obj.getDay();
+            return d ? d - 1 : 6;
+        }
+        static calendar(obj, firstweekday = 0, mindaysinfirstweek = 4) {
+            firstweekday = ul4._mod(firstweekday, 7);
+            if (mindaysinfirstweek < 1)
+                mindaysinfirstweek = 1;
+            else if (mindaysinfirstweek > 7)
+                mindaysinfirstweek = 7;
+            for (let offset = +1; offset >= -1; --offset) {
+                let year = obj.getFullYear() + offset;
+                let refDate = new _js_Date(year, 0, mindaysinfirstweek);
+                let weekDayDiff = ul4._mod(ul4.DateTimeProtocol.weekday(refDate) - firstweekday, 7);
+                let weekStartYear = refDate.getFullYear();
+                let weekStartMonth = refDate.getMonth();
+                let weekStartDay = refDate.getDate() - weekDayDiff;
+                let weekStart = new _js_Date(weekStartYear, weekStartMonth, weekStartDay);
+                if (obj.getTime() >= weekStart.getTime()) {
+                    let diff = ul4.SubAST.prototype._do(obj, weekStart);
+                    let week = Math.floor(diff.days() / 7) + 1;
+                    return [year, week, ul4.DateTimeProtocol.weekday(obj)];
+                }
+            }
+        }
+        static week(obj, firstweekday = 0, mindaysinfirstweek = 4) {
+            return ul4.DateTimeProtocol.calendar(obj, firstweekday, mindaysinfirstweek)[1];
+        }
+        static day(obj) {
+            return obj.getDate();
+        }
+        static month(obj) {
+            return obj.getMonth() + 1;
+        }
+        static year(obj) {
+            return obj.getFullYear();
+        }
+        static hour(obj) {
+            return obj.getHours();
+        }
+        static minute(obj) {
+            return obj.getMinutes();
+        }
+        static second(obj) {
+            return obj.getSeconds();
+        }
+        static microsecond(obj) {
+            return obj.getMilliseconds() * 1000;
+        }
+        static mimeformat(obj) {
+            let weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+            let monthname = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return weekdayname[ul4.DateTimeProtocol.weekday(obj)] + ", " + ul4._lpad(obj.getDate(), "0", 2) + " " + monthname[obj.getMonth()] + " " + obj.getFullYear() + " " + ul4._lpad(obj.getHours(), "0", 2) + ":" + ul4._lpad(obj.getMinutes(), "0", 2) + ":" + ul4._lpad(obj.getSeconds(), "0", 2) + " GMT";
+        }
+        static isoformat(obj) {
+            let year = obj.getFullYear();
+            let month = obj.getMonth() + 1;
+            let day = obj.getDate();
+            let hour = obj.getHours();
+            let minute = obj.getMinutes();
+            let second = obj.getSeconds();
+            let ms = obj.getMilliseconds();
+            let result = year + "-" + ul4._lpad(month.toString(), "0", 2) + "-" + ul4._lpad(day.toString(), "0", 2) + "T" + ul4._lpad(hour.toString(), "0", 2) + ":" + ul4._lpad(minute.toString(), "0", 2) + ":" + ul4._lpad(second.toString(), "0", 2);
+            if (ms)
+                result += "." + ul4._lpad(ms.toString(), "0", 3) + "000";
+            return result;
+        }
+        static yearday(obj) {
+            let leap = ul4._isleap(obj) ? 1 : 0;
+            let day = obj.getDate();
+            switch (obj.getMonth()) {
+                case 0:
+                    return day;
+                case 1:
+                    return 31 + day;
+                case 2:
+                    return 31 + 28 + leap + day;
+                case 3:
+                    return 31 + 28 + leap + 31 + day;
+                case 4:
+                    return 31 + 28 + leap + 31 + 30 + day;
+                case 5:
+                    return 31 + 28 + leap + 31 + 30 + 31 + day;
+                case 6:
+                    return 31 + 28 + leap + 31 + 30 + 31 + 30 + day;
+                case 7:
+                    return 31 + 28 + leap + 31 + 30 + 31 + 30 + 31 + day;
+                case 8:
+                    return 31 + 28 + leap + 31 + 30 + 31 + 30 + 31 + 31 + day;
+                case 9:
+                    return 31 + 28 + leap + 31 + 30 + 31 + 30 + 31 + 31 + 30 + day;
+                case 10:
+                    return 31 + 28 + leap + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + day;
+                case 11:
+                    return 31 + 28 + leap + 31 + 30 + 31 + 30 + 31 + 31 + 30 + 31 + 30 + day;
+            }
+        }
+    }
+    ul4.DateTimeProtocol = DateTimeProtocol;
+    class SubAST extends BinaryAST {
+        _do(obj1, obj2) {
+            if (obj1 && typeof (obj1.__sub__) === "function")
+                return obj1.__sub__(obj2);
+            else if (obj2 && typeof (obj2.__rsub__) === "function")
+                return obj2.__rsub__(obj1);
+            else if (ul4._isdate(obj1) && ul4._isdate(obj2))
+                return this._date_sub(obj1, obj2);
+            else if (ul4._isdatetime(obj1) && ul4._isdatetime(obj2))
+                return this._datetime_sub(obj1, obj2);
+            if (obj1 === null || obj2 === null)
+                throw new ul4.TypeError(ul4._type(this.obj1) + " - " + ul4._type(this.obj2) + " is not supported");
+            return obj1 - obj2;
+        }
+        _date_sub(obj1, obj2) {
+            return this._datetime_sub(obj1._date, obj2._date);
+        }
+        _datetime_sub(obj1, obj2) {
+            let swap = (obj2 > obj1);
+            if (swap) {
+                let t = obj1;
+                obj1 = obj2;
+                obj2 = t;
+            }
+            let year1 = obj1.getFullYear();
+            let yearday1 = ul4.DateTimeProtocol.yearday(obj1);
+            let year2 = obj2.getFullYear();
+            let yearday2 = ul4.DateTimeProtocol.yearday(obj2);
+            let diffdays = 0;
+            while (year1 > year2) {
+                diffdays += ul4.DateProtocol.yearday(ul4._date(year2, 12, 31));
+                ++year2;
+            }
+            diffdays += yearday1 - yearday2;
+            let hours1 = obj1.getHours();
+            let minutes1 = obj1.getMinutes();
+            let seconds1 = obj1.getSeconds();
+            let hours2 = obj2.getHours();
+            let minutes2 = obj2.getMinutes();
+            let seconds2 = obj2.getSeconds();
+            let diffseconds = (seconds1 - seconds2) + 60 * ((minutes1 - minutes2) + 60 * (hours1 - hours2));
+            let diffmilliseconds = obj1.getMilliseconds() - obj2.getMilliseconds();
+            if (swap) {
+                diffdays = -diffdays;
+                diffseconds = -diffseconds;
+                diffmilliseconds = -diffmilliseconds;
+            }
+            return new ul4.TimeDelta(diffdays, diffseconds, 1000 * diffmilliseconds);
+        }
+    }
+    ul4.SubAST = SubAST;
     class DateProtocol extends Protocol {
         static ul4type() {
             return "date";
+        }
+        static weekday(obj) {
+            return ul4.DateTimeProtocol.weekday(obj._date);
+        }
+        static calendar(obj, firstweekday = 0, mindaysinfirstweek = 4) {
+            return ul4.DateTimeProtocol.calendar(obj._date, firstweekday, mindaysinfirstweek);
+        }
+        static week(obj, firstweekday = 0, mindaysinfirstweek = 4) {
+            return ul4.DateProtocol.calendar(obj, firstweekday, mindaysinfirstweek)[1];
+        }
+        static day(obj) {
+            return obj._date.getDate();
+        }
+        static month(obj) {
+            return obj._date.getMonth() + 1;
+        }
+        static year(obj) {
+            return obj._date.getFullYear();
+        }
+        static mimeformat(obj) {
+            let weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+            let monthname = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            let d = obj._date;
+            return weekdayname[ul4.DateTimeProtocol.weekday(d)] + ", " + ul4._lpad(d.getDate(), "0", 2) + " " + monthname[d.getMonth()] + " " + d.getFullYear();
+        }
+        static isoformat(obj) {
+            let d = obj._date;
+            return d.getFullYear() + "-" + ul4._lpad((d.getMonth() + 1).toString(), "0", 2) + "-" + ul4._lpad(d.getDate().toString(), "0", 2);
+        }
+        static yearday(obj) {
+            return ul4.DateTimeProtocol.yearday(obj._date);
         }
     }
     ul4.DateProtocol = DateProtocol;
@@ -1199,6 +1752,9 @@ export var ul4;
             for (let item of items)
                 this.items[item] = true;
         }
+        clear() {
+            this.items = {};
+        }
         has(item) {
             return this.items[item] ? true : false;
         }
@@ -1304,13 +1860,369 @@ export var ul4;
         }
     }
     ul4._Set = _Set;
-    class slice {
+    class slice extends Proto {
         constructor(start, stop) {
+            super();
             this.start = start;
             this.stop = stop;
         }
+        __repr__() {
+            return "slice(" + ul4._repr(this.start) + ", " + ul4._repr(this.stop) + ")";
+        }
+        __getattr__(attrname) {
+            switch (attrname) {
+                case "start":
+                    return this.start;
+                case "stop":
+                    return this.stop;
+                default:
+                    throw new ul4.AttributeError(this, attrname);
+            }
+        }
     }
     ul4.slice = slice;
+    class Context {
+        constructor(vars) {
+            if (vars === null || typeof (vars) === "undefined")
+                vars = {};
+            this.vars = vars;
+            this.indents = [];
+            this.escapes = [];
+            this._output = [];
+        }
+        inheritvars() {
+            let context = Object.create(this);
+            context.vars = Object.create(this.vars);
+            return context;
+        }
+        withindent(indent) {
+            let context = Object.create(this);
+            if (indent !== null) {
+                context.indents = this.indents.slice();
+                context.indents.push(indent);
+            }
+            return context;
+        }
+        replaceoutput() {
+            let context = Object.create(this);
+            context._output = [];
+            return context;
+        }
+        clone(vars) {
+            return Object.create(this);
+        }
+        output(value) {
+            for (let escape of this.escapes)
+                value = escape(value);
+            this._output.push(value);
+        }
+        getoutput() {
+            return this._output.join("");
+        }
+        get(name) {
+            return this.vars[name];
+        }
+        set(name, value) {
+            this.vars[name] = value;
+        }
+    }
+    ul4.Context = Context;
+    class Tag extends AST {
+        constructor(template, tag, tagpos, codepos) {
+            super(tagpos);
+            this.template = template;
+            this.tag = tag;
+            this.codepos = codepos;
+        }
+        _eval() { return null; }
+        ;
+        __getattr__(attrname) {
+            switch (attrname) {
+                case "template":
+                    return this.template;
+                case "tag":
+                    return this.tag;
+                case "text":
+                    return this.text;
+                case "code":
+                    return this.code;
+                default:
+                    return super.__getattr__(attrname);
+            }
+        }
+    }
+    ul4.Tag = Tag;
+    Object.defineProperty(ul4.Tag.prototype, "text", {
+        get: function () {
+            if (typeof (this.template) !== "undefined")
+                return this.template.source.substring(this.pos.start, this.pos.stop);
+            else
+                return null;
+        }
+    });
+    Object.defineProperty(ul4.Tag.prototype, "code", {
+        get: function () {
+            if (typeof (this.template) !== "undefined")
+                return this.template.source.substring(this.codepos.start, this.codepos.stop);
+            else
+                return null;
+        }
+    });
+    class Color extends Proto {
+        constructor(r = 0, g = 0, b = 0, a = 255) {
+            super();
+            this._r = r;
+            this._g = g;
+            this._b = b;
+            this._a = a;
+        }
+        __repr__() {
+            let r = ul4._lpad(this._r.toString(16), "0", 2);
+            let g = ul4._lpad(this._g.toString(16), "0", 2);
+            let b = ul4._lpad(this._b.toString(16), "0", 2);
+            let a = ul4._lpad(this._a.toString(16), "0", 2);
+            if (this._a !== 0xff) {
+                if (r[0] === r[1] && g[0] === g[1] && b[0] === b[1] && a[0] === a[1])
+                    return "#" + r[0] + g[0] + b[0] + a[0];
+                else
+                    return "#" + r + g + b + a;
+            }
+            else {
+                if (r[0] === r[1] && g[0] === g[1] && b[0] === b[1])
+                    return "#" + r[0] + g[0] + b[0];
+                else
+                    return "#" + r + g + b;
+            }
+        }
+        __str__() {
+            if (this._a !== 0xff) {
+                return "rgba(" + this._r + ", " + this._g + ", " + this._b + ", " + (this._a / 255) + ")";
+            }
+            else {
+                let r = ul4._lpad(this._r.toString(16), "0", 2);
+                let g = ul4._lpad(this._g.toString(16), "0", 2);
+                let b = ul4._lpad(this._b.toString(16), "0", 2);
+                let a = ul4._lpad(this._a.toString(16), "0", 2);
+                if (r[0] === r[1] && g[0] === g[1] && b[0] === b[1])
+                    return "#" + r[0] + g[0] + b[0];
+                else
+                    return "#" + r + g + b;
+            }
+        }
+        __iter__() {
+            return {
+                obj: this,
+                index: 0,
+                next: function () {
+                    if (this.index == 0) {
+                        ++this.index;
+                        return { value: this.obj._r, done: false };
+                    }
+                    else if (this.index == 1) {
+                        ++this.index;
+                        return { value: this.obj._g, done: false };
+                    }
+                    else if (this.index == 2) {
+                        ++this.index;
+                        return { value: this.obj._b, done: false };
+                    }
+                    else if (this.index == 3) {
+                        ++this.index;
+                        return { value: this.obj._a, done: false };
+                    }
+                    else
+                        return { done: true };
+                }
+            };
+        }
+        __getattr__(attrname) {
+            let self = this;
+            switch (attrname) {
+                case "r":
+                    let r = function r() { return self._r; };
+                    ul4.expose(r, []);
+                    return r;
+                case "g":
+                    let g = function g() { return self._g; };
+                    ul4.expose(g, []);
+                    return g;
+                case "b":
+                    let b = function b() { return self._b; };
+                    ul4.expose(b, []);
+                    return b;
+                case "a":
+                    let a = function a() { return self._a; };
+                    ul4.expose(a, []);
+                    return a;
+                case "lum":
+                    let lum = function lum() { return self.lum(); };
+                    ul4.expose(lum, []);
+                    return lum;
+                case "hls":
+                    let hls = function hls() { return self.hls(); };
+                    ul4.expose(hls, []);
+                    return hls;
+                case "hlsa":
+                    let hlsa = function hlsa() { return self.hlsa(); };
+                    ul4.expose(hlsa, []);
+                    return hlsa;
+                case "hsv":
+                    let hsv = function hsv() { return self.hsv(); };
+                    ul4.expose(hsv, []);
+                    return hsv;
+                case "hsva":
+                    let hsva = function hsva() { return self.hsva(); };
+                    ul4.expose(hsva, []);
+                    return hsva;
+                case "witha":
+                    let witha = function witha(a) { return self.witha(a); };
+                    ul4.expose(witha, ["a"]);
+                    return witha;
+                case "withlum":
+                    let withlum = function withlum(lum) { return self.withlum(lum); };
+                    ul4.expose(withlum, ["lum"]);
+                    return withlum;
+                case "abslum":
+                    let abslum = function abslum(lum) { return self.abslum(lum); };
+                    ul4.expose(abslum, ["lum"]);
+                    return abslum;
+                case "rellum":
+                    let rellum = function rellum(lum) { return self.rellum(lum); };
+                    ul4.expose(rellum, ["lum"]);
+                    return rellum;
+                default:
+                    throw new ul4.AttributeError(this, attrname);
+            }
+        }
+        __getitem__(key) {
+            let orgkey = key;
+            if (key < 0)
+                key += 4;
+            switch (key) {
+                case 0:
+                    return this._r;
+                case 1:
+                    return this._g;
+                case 2:
+                    return this._b;
+                case 3:
+                    return this._a;
+                default:
+                    throw new ul4.IndexError(this, key);
+            }
+        }
+        __eq__(other) {
+            if (other instanceof ul4.Color)
+                return this._r == other._r && this._g == other._g && this._b == other._b && this._a == other._a;
+            return false;
+        }
+        r() {
+            return this._r;
+        }
+        g() {
+            return this._g;
+        }
+        b() {
+            return this._b;
+        }
+        a() {
+            return this._a;
+        }
+        lum() {
+            return this.hls()[1];
+        }
+        hls() {
+            let r = this._r / 255.0;
+            let g = this._g / 255.0;
+            let b = this._b / 255.0;
+            let maxc = Math.max(r, g, b);
+            let minc = Math.min(r, g, b);
+            let h, l, s;
+            let rc, gc, bc;
+            l = (minc + maxc) / 2.0;
+            if (minc == maxc)
+                return [0.0, l, 0.0];
+            if (l <= 0.5)
+                s = (maxc - minc) / (maxc + minc);
+            else
+                s = (maxc - minc) / (2.0 - maxc - minc);
+            rc = (maxc - r) / (maxc - minc);
+            gc = (maxc - g) / (maxc - minc);
+            bc = (maxc - b) / (maxc - minc);
+            if (r == maxc)
+                h = bc - gc;
+            else if (g == maxc)
+                h = 2.0 + rc - bc;
+            else
+                h = 4.0 + gc - rc;
+            h = (h / 6.0) % 1.0;
+            return [h, l, s];
+        }
+        hlsa() {
+            let hls = this.hls();
+            return hls.concat(this._a / 255.0);
+        }
+        hsv() {
+            let r = this._r / 255.0;
+            let g = this._g / 255.0;
+            let b = this._b / 255.0;
+            let maxc = Math.max(r, g, b);
+            let minc = Math.min(r, g, b);
+            let v = maxc;
+            if (minc == maxc)
+                return [0.0, 0.0, v];
+            let s = (maxc - minc) / maxc;
+            let rc = (maxc - r) / (maxc - minc);
+            let gc = (maxc - g) / (maxc - minc);
+            let bc = (maxc - b) / (maxc - minc);
+            let h;
+            if (r == maxc)
+                h = bc - gc;
+            else if (g == maxc)
+                h = 2.0 + rc - bc;
+            else
+                h = 4.0 + gc - rc;
+            h = (h / 6.0) % 1.0;
+            return [h, s, v];
+        }
+        hsva() {
+            let hsv = this.hsv();
+            return hsv.concat(this._a / 255.0);
+        }
+        witha(a) {
+            if (typeof (a) !== "number")
+                throw new ul4.TypeError("witha() requires a number");
+            return new ul4.Color(this._r, this._g, this._b, a);
+        }
+        withlum(lum) {
+            if (typeof (lum) !== "number")
+                throw new ul4.TypeError("witha() requires a number");
+            let hlsa = this.hlsa();
+            return ul4._hls(hlsa[0], lum, hlsa[2], hlsa[3]);
+        }
+        ul4type() {
+            return "color";
+        }
+    }
+    ul4.Color = Color;
+    ul4.expose(ul4.Color.prototype.r, []);
+    ul4.expose(ul4.Color.prototype.g, []);
+    ul4.expose(ul4.Color.prototype.b, []);
+    ul4.expose(ul4.Color.prototype.a, []);
+    ul4.expose(ul4.Color.prototype.lum, []);
+    ul4.expose(ul4.Color.prototype.hls, []);
+    ul4.expose(ul4.Color.prototype.hlsa, []);
+    ul4.expose(ul4.Color.prototype.hsv, []);
+    ul4.expose(ul4.Color.prototype.hsva, []);
+    ul4.expose(ul4.Color.prototype.witha, ["a"]);
+    ul4.expose(ul4.Color.prototype.withlum, ["lum"]);
+    class MonthDelta extends Proto {
+        constructor(months = 0) {
+            super();
+            this._months = months;
+        }
+    }
+    ul4.MonthDelta = MonthDelta;
     class Exception extends Error {
         constructor(message) {
             super(message);
@@ -1326,6 +2238,38 @@ export var ul4;
         }
     }
     ul4.Exception = Exception;
+    class IndexError extends Exception {
+        constructor(obj, index) {
+            super("index " + ul4._repr(index) + " out of range");
+            this.obj = obj;
+            this.index = index;
+        }
+        toString() {
+            return "index " + this.index + " out of range for " + ul4._type(this.obj);
+        }
+    }
+    ul4.IndexError = IndexError;
+    class SyntaxError extends ul4.Exception {
+    }
+    ul4.SyntaxError = SyntaxError;
+    ;
+    class LValueRequiredError extends SyntaxError {
+        constructor() {
+            super("lvalue required");
+        }
+    }
+    ul4.LValueRequiredError = LValueRequiredError;
+    class LocationError extends Exception {
+        constructor(location, cause) {
+            super("nested exception in " + ul4._repr(location));
+            this.location = location;
+            this.cause = cause;
+        }
+    }
+    ul4.LocationError = LocationError;
+    class InternalException extends Exception {
+    }
+    ul4.InternalException = InternalException;
     class ArgumentError extends Exception {
     }
     ul4.ArgumentError = ArgumentError;
@@ -1348,10 +2292,10 @@ export var ul4;
 })(ul4 || (ul4 = {}));
 export var ul4on;
 (function (ul4on) {
-    let _registry = {};
+    ul4on._registry = {};
     function register(name, f) {
         f.prototype.ul4onname = name;
-        _registry[name] = f;
+        ul4on._registry[name] = f;
     }
     ul4on.register = register;
     function dumps(obj, indent) {
@@ -1494,8 +2438,297 @@ export var ul4on;
             this.backrefs = [];
             this.stack = [];
         }
-        load() { }
-        ;
+        readchar() {
+            if (this.pos >= this.data.length)
+                return null;
+            return this.data.charAt(this.pos++);
+        }
+        readcharoreof() {
+            if (this.pos >= this.data.length)
+                return null;
+            return this.data.charAt(this.pos++);
+        }
+        readblackchar() {
+            let re_white = /\s/;
+            for (;;) {
+                if (this.pos >= this.data.length)
+                    throw "UL4 decoder at EOF at position " + this.pos + " with path " + this.stack.join("/");
+                let c = this.data.charAt(this.pos++);
+                if (!c.match(re_white))
+                    return c;
+            }
+        }
+        read(size) {
+            if (this.pos + size > this.data.length)
+                size = this.data.length - this.pos;
+            let result = this.data.substring(this.pos, this.pos + size);
+            this.pos += size;
+            return result;
+        }
+        backup() {
+            --this.pos;
+        }
+        readnumber() {
+            let re_digits = /[-+0123456789.eE]/, value = "";
+            for (;;) {
+                let c = this.readcharoreof();
+                if (c !== null && c.match(re_digits))
+                    value += c;
+                else {
+                    let result = parseFloat(value);
+                    if (isNaN(result))
+                        throw "invalid number, got " + ul4._repr("value") + " at position " + this.pos + " with path " + this.stack.join("/");
+                    return result;
+                }
+            }
+        }
+        _beginfakeloading() {
+            let oldpos = this.backrefs.length;
+            this.backrefs.push(null);
+            return oldpos;
+        }
+        _endfakeloading(oldpos, value) {
+            this.backrefs[oldpos] = value;
+        }
+        _readescape(escapechar, length) {
+            let chars = this.read(length);
+            if (chars.length != length)
+                throw "broken escape " + ul4._repr("\\" + escapechar + chars) + " at position " + this.pos + " with path " + this.stack.join("/");
+            let codepoint = parseInt(chars, 16);
+            if (isNaN(codepoint))
+                throw "broken escape " + ul4._repr("\\" + escapechar + chars) + " at position " + this.pos + " with path " + this.stack.join("/");
+            return String.fromCharCode(codepoint);
+        }
+        load() {
+            let typecode = this.readblackchar();
+            let result;
+            switch (typecode) {
+                case "^":
+                    return this.backrefs[this.readnumber()];
+                case "n":
+                case "N":
+                    if (typecode === "N")
+                        this.backrefs.push(null);
+                    return null;
+                case "b":
+                case "B":
+                    result = this.readchar();
+                    if (result === "T")
+                        result = true;
+                    else if (result === "F")
+                        result = false;
+                    else
+                        throw "wrong value for boolean, expected 'T' or 'F', got " + ul4._repr(result) + " at position " + this.pos + " with path " + this.stack.join("/");
+                    if (typecode === "B")
+                        this.backrefs.push(result);
+                    return result;
+                case "i":
+                case "I":
+                case "f":
+                case "F":
+                    result = this.readnumber();
+                    if (typecode === "I" || typecode === "F")
+                        this.backrefs.push(result);
+                    return result;
+                case "s":
+                case "S":
+                    result = [];
+                    let delimiter = this.readblackchar();
+                    for (;;) {
+                        let c = this.readchar();
+                        if (c == delimiter)
+                            break;
+                        if (c == "\\") {
+                            let c2 = this.readchar();
+                            if (c2 == "\\")
+                                result.push("\\");
+                            else if (c2 == "n")
+                                result.push("\n");
+                            else if (c2 == "r")
+                                result.push("\r");
+                            else if (c2 == "t")
+                                result.push("\t");
+                            else if (c2 == "f")
+                                result.push("\u000c");
+                            else if (c2 == "b")
+                                result.push("\u0008");
+                            else if (c2 == "a")
+                                result.push("\u0007");
+                            else if (c2 == "'")
+                                result.push("'");
+                            else if (c2 == '"')
+                                result.push('"');
+                            else if (c2 == "x")
+                                result.push(this._readescape("x", 2));
+                            else if (c2 == "u")
+                                result.push(this._readescape("u", 4));
+                            else if (c2 == "U")
+                                result.push(this._readescape("U", 8));
+                            else
+                                result.push("\\" + c2);
+                        }
+                        else
+                            result.push(c);
+                    }
+                    result = result.join("");
+                    if (typecode === "S")
+                        this.backrefs.push(result);
+                    return result;
+                case "c":
+                case "C":
+                    result = new ul4.Color();
+                    if (typecode === "C")
+                        this.backrefs.push(result);
+                    result._r = this.load();
+                    result._g = this.load();
+                    result._b = this.load();
+                    result._a = this.load();
+                    return result;
+                case "x":
+                case "X":
+                    {
+                        let year = this.load();
+                        let month = this.load();
+                        let day = this.load();
+                        result = new ul4.Date(year, month, day);
+                        if (typecode === "X")
+                            this.backrefs.push(result);
+                        return result;
+                    }
+                case "z":
+                case "Z":
+                    result = new Date();
+                    result.setFullYear(this.load());
+                    result.setDate(1);
+                    result.setMonth(this.load() - 1);
+                    result.setDate(this.load());
+                    result.setHours(this.load());
+                    result.setMinutes(this.load());
+                    result.setSeconds(this.load());
+                    result.setMilliseconds(this.load() / 1000);
+                    if (typecode === "Z")
+                        this.backrefs.push(result);
+                    return result;
+                case "t":
+                case "T":
+                    result = new ul4.TimeDelta();
+                    result._days = this.load();
+                    result._seconds = this.load();
+                    result._microseconds = this.load();
+                    if (typecode === "T")
+                        this.backrefs.push(result);
+                    return result;
+                case "r":
+                case "R":
+                    result = new ul4.slice();
+                    if (typecode === "R")
+                        this.backrefs.push(result);
+                    result.start = this.load();
+                    result.stop = this.load();
+                    return result;
+                case "m":
+                case "M":
+                    result = new ul4.MonthDelta();
+                    if (typecode === "M")
+                        this.backrefs.push(result);
+                    result._months = this.load();
+                    return result;
+                case "l":
+                case "L":
+                    this.stack.push("list");
+                    result = [];
+                    if (typecode === "L")
+                        this.backrefs.push(result);
+                    for (;;) {
+                        typecode = this.readblackchar();
+                        if (typecode === "]")
+                            break;
+                        this.backup();
+                        result.push(this.load());
+                    }
+                    this.stack.pop();
+                    return result;
+                case "d":
+                case "D":
+                case "e":
+                case "E":
+                    if (!helpers._havemap && (typecode == "e" || typecode == "E"))
+                        throw "ordered dictionaries are not supported at position " + this.pos + " with path " + this.stack.join("/");
+                    result = helpers._emptymap();
+                    this.stack.push(typecode === "d" || typecode === "D" ? "dict" : "odict");
+                    if (typecode === "D" || typecode === "E")
+                        this.backrefs.push(result);
+                    for (;;) {
+                        typecode = this.readblackchar();
+                        if (typecode === "}")
+                            break;
+                        this.backup();
+                        let key = this.load();
+                        let value = this.load();
+                        helpers._setmap(result, key, value);
+                    }
+                    this.stack.pop();
+                    return result;
+                case "y":
+                case "Y":
+                    this.stack.push("set");
+                    result = helpers._makeset();
+                    if (typecode === "Y")
+                        this.backrefs.push(result);
+                    for (;;) {
+                        typecode = this.readblackchar();
+                        if (typecode === "}")
+                            break;
+                        this.backup();
+                        result.add(this.load());
+                    }
+                    this.stack.pop();
+                    return result;
+                case "o":
+                case "O":
+                    {
+                        let oldpos;
+                        if (typecode === "O")
+                            oldpos = this._beginfakeloading();
+                        let name = this.load();
+                        this.stack.push(name);
+                        let constructor;
+                        if (this.registry !== null) {
+                            constructor = this.registry[name];
+                            if (typeof (constructor) === "undefined")
+                                constructor = ul4on._registry[name];
+                        }
+                        else
+                            constructor = ul4on._registry[name];
+                        if (typeof (constructor) === "undefined")
+                            throw new ul4.ValueError("can't load object of type " + ul4._repr(name) + " at position " + this.pos + " with path " + this.stack.join("/"));
+                        result = new constructor();
+                        if (typecode === "O")
+                            this._endfakeloading(oldpos, result);
+                        result.ul4onload(this);
+                        typecode = this.readblackchar();
+                        if (typecode !== ")")
+                            throw new ul4.ValueError("object terminator ')' for object of type '" + name + "' expected, got " + ul4._repr(typecode) + " at position " + this.pos + " with path " + this.stack.join("/"));
+                        this.stack.pop();
+                        return result;
+                    }
+                default:
+                    throw new ul4.ValueError("unknown typecode " + ul4._repr(typecode) + " at position " + this.pos + " with path " + this.stack.join("/"));
+            }
+        }
+        loadcontent() {
+            let self = this;
+            return {
+                next: function () {
+                    let typecode = self.readblackchar();
+                    self.backup();
+                    if (typecode == ")")
+                        return { done: true };
+                    else
+                        return { done: false, value: self.load() };
+                }
+            };
+        }
     }
     ul4on.Decoder = Decoder;
 })(ul4on || (ul4on = {}));

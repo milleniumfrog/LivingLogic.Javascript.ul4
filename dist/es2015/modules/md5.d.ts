@@ -1,6 +1,6 @@
 export declare class Md5 {
-    static hashStr(str: string, raw?: boolean): string | Int32Array | undefined;
-    static hashAsciiStr(str: string, raw?: boolean): string | Int32Array | undefined;
+    static hashStr(str: string, raw?: boolean): string | Int32Array;
+    static hashAsciiStr(str: string, raw?: boolean): string | Int32Array;
     private static stateIdentity;
     private static buffer32Identity;
     private static hexChars;
@@ -26,5 +26,5 @@ export declare class Md5 {
         state: number[];
     };
     setState(state: any): void;
-    end(raw?: boolean): string | Int32Array | undefined;
+    end(raw?: boolean): string | Int32Array;
 }
